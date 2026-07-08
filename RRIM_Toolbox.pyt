@@ -288,7 +288,7 @@ class NativeTopographicOpenness(object):
                 gt=ds.GetGeoTransform();prj=ds.GetProjection()
 
                 for path,data in[(pos_out,pos),(neg_out,neg)]:
-                    d=driver.Create(path,data.shape[1],data.shape[0],1,gdal.GDT_Float32,options=["TILED=YES","BIGTIFF=IF_SAFER"])
+                    d=driver.Create(path,data.shape[1],data.shape[0],1,gdal.GDT_Float32,options=["TILED=YES","BIGTIFF=IF_SAFER","STATISTICS=NO","COLORINTERP=undefined","COPY_SRC_OVERVIEWS=NO"])
                     if d is None:raise RuntimeError(f"Could not create {path}")
                     d.SetGeoTransform(gt);d.SetProjection(prj)
                     b=d.GetRasterBand(1)
@@ -306,14 +306,15 @@ class NativeTopographicOpenness(object):
             except Exception as e:
                 return f"{dem_input}: ERROR {e}"
 
-        workers=min(2,len(dem_list))
+        workers=min(20,len(dem_list))
         log(f"Using {workers} worker(s).")
 
         with ThreadPoolExecutor(max_workers=workers) as ex:
             for fut in as_completed([ex.submit(process,d) for d in dem_list]):
                 log(fut.result())
 
-        for r in outputs:self._add(r)
+        if not folder:
+            for r in outputs:self._add(r)
         log("All DEMs processed.")
 
 
@@ -415,7 +416,7 @@ class SlopeFromDEM(object):
 
     def _write_tif(self,out_path,arr,ref_ds,nodata):
         driver=gdal.GetDriverByName("GTiff")
-        ds=driver.Create(out_path,arr.shape[1],arr.shape[0],1,gdal.GDT_Float32)
+        ds=driver.Create(out_path,arr.shape[1],arr.shape[0],1,gdal.GDT_Float32,options=["TILED=YES","BIGTIFF=IF_SAFER","STATISTICS=NO","COLORINTERP=undefined","COPY_SRC_OVERVIEWS=NO"])
         ds.SetGeoTransform(ref_ds.GetGeoTransform());ds.SetProjection(ref_ds.GetProjection())
         b=ds.GetRasterBand(1);b.WriteArray(arr);b.SetNoDataValue(nodata)
         ds.FlushCache()
@@ -435,7 +436,8 @@ class SlopeFromDEM(object):
             msg.addMessage(f"Computing slope (degrees) from DEM: {base}")
             ds=gdal.Open(path);arr=ds.GetRasterBand(1).ReadAsArray()
             slope=self._compute_slope(arr,ds.GetGeoTransform(),nodata)
-            self._write_tif(out_path,slope,ds,nodata);self._add_to_map(out_path)
+            self._write_tif(out_path,slope,ds,nodata)
+            if not folder:self._add_to_map(out_path)
 
         if folder:
             for f in os.listdir(folder):
@@ -534,7 +536,7 @@ class RedReliefImageMap(object):
 
     def _save_tif(self, R, G, B, src_ds, out_path, nd):
         driver = gdal.GetDriverByName("GTiff")
-        opts = ["COMPRESS=DEFLATE", "PREDICTOR=2", "TILED=YES"]
+        opts = ["COMPRESS=DEFLATE", "PREDICTOR=2", "TILED=YES","BIGTIFF=IF_SAFER","STATISTICS=NO","COLORINTERP=undefined","COPY_SRC_OVERVIEWS=NO"]
         rows = src_ds.RasterYSize
         cols = src_ds.RasterXSize
         gt = src_ds.GetGeoTransform()
@@ -632,6 +634,25 @@ class RedReliefImageMap(object):
         tif = os.path.join(out_folder, f"{base}_{suffix}.tif")
         msg.addMessage(f"Saving TIFF: {tif}")
         self._save_tif(R, G, B, src_ds, tif, nd)
+
+        # ------------------------------------------------------------------
+        # ADD ONLY IN BATCH MODE: write GDAL PAM sidecar (.tif.aux.xml)
+        # ------------------------------------------------------------------
+        if not single:
+            aux_path = tif + ".aux.xml"
+            try:
+                with open(aux_path, "w", encoding="utf-8") as f:
+                    f.write(
+                        "<PAMDataset>\n"
+                        "  <Metadata>\n"
+                        "    <MDI key=\"DataType\">Processed</MDI>\n"
+                        "  </Metadata>\n"
+                        "</PAMDataset>\n"
+                    )
+                msg.addMessage(f"Created GDAL sidecar: {aux_path}")
+            except Exception as e:
+                msg.addWarningMessage(f"Could not write aux.xml: {e}")
+
         if single:
             msg.addMessage("Adding RRIM TIFF to map with RGB/No Stretch symbology")
             self._add_tif_as_exact_rgb_no_stretch(tif)
@@ -744,7 +765,6 @@ class RedReliefImageMapClassic(object):
         onorm[~np.isfinite(onorm)] = 0
         si = (snorm * 255).astype(np.uint8)
         oi = (onorm * 255).astype(np.uint8)
-        # inverted grayscale lookup as requested
         g = GRAYS_LUT[255 - oi]
         r = REDS_LUT[si]
         try:
@@ -755,7 +775,7 @@ class RedReliefImageMapClassic(object):
 
     def _save_tif(self, R, G, B, src_ds, out_path, nd):
         driver = gdal.GetDriverByName("GTiff")
-        opts = ["COMPRESS=DEFLATE", "PREDICTOR=2", "TILED=YES"]
+        opts = ["COMPRESS=DEFLATE", "PREDICTOR=2", "TILED=YES","BIGTIFF=IF_SAFER","STATISTICS=NO","COLORINTERP=undefined","COPY_SRC_OVERVIEWS=NO"]
         rows = src_ds.RasterYSize
         cols = src_ds.RasterXSize
         gt = src_ds.GetGeoTransform()
@@ -853,6 +873,25 @@ class RedReliefImageMapClassic(object):
         tif = os.path.join(out_folder, f"{base}_{suffix}.tif")
         msg.addMessage(f"Saving TIFF: {tif}")
         self._save_tif(R, G, B, src_ds, tif, nd)
+
+        # ------------------------------------------------------------------
+        # ADD ONLY IN BATCH MODE: write GDAL PAM sidecar (.tif.aux.xml)
+        # ------------------------------------------------------------------
+        if not single:
+            aux_path = tif + ".aux.xml"
+            try:
+                with open(aux_path, "w", encoding="utf-8") as f:
+                    f.write(
+                        "<PAMDataset>\n"
+                        "  <Metadata>\n"
+                        "    <MDI key=\"DataType\">Processed</MDI>\n"
+                        "  </Metadata>\n"
+                        "</PAMDataset>\n"
+                    )
+                msg.addMessage(f"Created GDAL sidecar: {aux_path}")
+            except Exception as e:
+                msg.addWarningMessage(f"Could not write aux.xml: {e}")
+
         if single:
             msg.addMessage("Adding Classic RRIM TIFF to map with RGB/No Stretch symbology")
             self._add_tif_as_exact_rgb_no_stretch(tif)
@@ -885,7 +924,3 @@ class RedReliefImageMapClassic(object):
         op = arcpy.Describe(o).catalogPath
         msg.addMessage("Computing Classic RRIM (single-tile mode)")
         self._process_one(sp, op, out, nd, msg, "rrim_classic", True)
-
-
-
-

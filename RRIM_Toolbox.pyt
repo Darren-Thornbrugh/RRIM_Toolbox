@@ -306,9 +306,8 @@ class NativeTopographicOpenness(object):
             except Exception as e:
                 return f"{dem_input}: ERROR {e}"
 
-        workers=min(20,len(dem_list))
-        log(f"Using {workers} worker(s).")
-
+        workers=min(8,len(dem_list))
+        log(f"Using {workers} worker(s), capped at 8 for stable production throughput.")
         with ThreadPoolExecutor(max_workers=workers) as ex:
             for fut in as_completed([ex.submit(process,d) for d in dem_list]):
                 log(fut.result())

@@ -5,13 +5,12 @@
 
 The RRIM Toolbox is a complete, ArcGIS Pro–native implementation of modern and classic terrain visualization techniques used in geomorphology, archaeology, hydrology, and landscape analysis.
 
-This toolbox provides:
+This toolbox provides four modules:
 
-- **Native Topographic Openness (POS/NEG)**
-- **Openness Index (POS–NEG)**
-- **Slope from DEM**
-- **Red Relief Image Map (Custom)**
-- **Red Relief Image Map (Classic)**
+1. **Topographic Openness (POS / NEG / Index)**
+2. **Slope from DEM**
+3. **Red Relief Image Map (Custom)**
+4. **Red Relief Image Map (Classic)**
 
 The toolbox is written entirely in pure Python, using only:
 
@@ -23,19 +22,20 @@ No external modules, no pip installs, no conda environments, and no RVT dependen
 
 ---
 
-# 1. Native Topographic Openness (POS/NEG)
+# 1. Topographic Openness (POS / NEG / Index)
 
 ## High‑Performance, ArcGIS‑Native Implementation
 
-This tool computes positive and negative topographic openness using a fully vectorized, dependency‑free algorithm based on published descriptions of the RVT method.
+This module computes **positive openness**, **negative openness**, and the **openness index** in a single tool.  
+It uses a fully vectorized, dependency‑free algorithm based on published descriptions of the RVT method.
 
 ### Key Characteristics
 
-#### 1. Dependency‑Free Algorithm
+#### Dependency‑Free Algorithm
 Runs entirely inside ArcGIS Pro’s default Python environment.  
 No external libraries or installations required.
 
-#### 2. Vectorized Horizon Scanning
+#### Vectorized Horizon Scanning
 The algorithm uses:
 
 - precomputed horizon shift vectors  
@@ -46,11 +46,11 @@ The algorithm uses:
 
 This design supports efficient processing of large DEMs.
 
-#### 3. Dimensionality‑Safe Horizon Vectors
+#### Dimensionality‑Safe Horizon Vectors
 A guard ensures horizon vectors never collapse into invalid 1‑D arrays, improving stability and correctness.
 
-#### 4. Designed for Large DEMs
-The implementation is optimized for high‑resolution LiDAR‑derived DEMs and tiled workflows.
+#### Designed for Large DEMs
+Optimized for high‑resolution LiDAR‑derived DEMs and tiled workflows.
 
 ---
 
@@ -61,7 +61,7 @@ The implementation is optimized for high‑resolution LiDAR‑derived DEMs and t
 | **Input DEM(s)** | One or more DEM rasters or a folder of DEM tiles. |
 | **Search Radius (pixels)** | Horizon scanning radius. Typical values: 50–200. |
 | **Number of Directions** | 8 or 16. |
-| **Output Folder** | Folder where POS/NEG rasters will be written. |
+| **Output Folder** | Folder where POS/NEG/Index rasters will be written. |
 | **Output NoData Value** | Default: –9999. |
 | **Debug Mode** | Optional verbose logging. |
 
@@ -71,8 +71,9 @@ The implementation is optimized for high‑resolution LiDAR‑derived DEMs and t
 
 - `*_pos.tif` — Positive Openness  
 - `*_neg.tif` — Negative Openness  
+- `*_index.tif` — Openness Index (POS–NEG)/2  
 
-Both outputs are:
+All outputs are:
 
 - 32‑bit float GeoTIFF  
 - georeferenced  
@@ -82,40 +83,21 @@ Both outputs are:
 
 ---
 
-# 2. Openness Index (POS–NEG)
+# 2. Slope from DEM
 
-Computes the standard openness index:
-
-
-
-\[
-\text{Index} = \frac{\text{POS} - \text{NEG}}{2}
-\]
-
-
-
-### Inputs
-- POS raster  
-- NEG raster  
-- or a folder containing POS/NEG tiles  
-
-### Output
-- Single‑band Float32 GeoTIFF  
-
----
-
-# 3. Slope from DEM
-
-Computes slope in degrees using a 3×3 neighborhood kernel.
+Computes slope in degrees using a 3×3 Horn neighborhood kernel.
 
 ### Features
+
 - Pure NumPy implementation  
 - ArcGIS‑native  
-- Produces smooth, high‑quality slope rasters  
+- Smooth, high‑quality slope rasters  
+- No NoData propagation issues  
+- Fast and stable for large DEMs  
 
 ---
 
-# 4. Red Relief Image Map (Custom)
+# 3. Red Relief Image Map (Custom)
 
 ## Modern RRIM Visualization Using POS, NEG, and Slope
 
@@ -133,9 +115,16 @@ The result is a modern, perceptually uniform, high‑contrast visualization suit
 - scientific visualization  
 - publication‑quality figures  
 
+### Output
+
+- RGB GeoTIFF  
+- GDAL `.aux.xml` sidecar for correct ArcGIS Pro color handling  
+- No stretch applied  
+- Ready for map display  
+
 ---
 
-# 5. Red Relief Image Map (Classic)
+# 4. Red Relief Image Map (Classic)
 
 ## Traditional RRIM Visualization (Reds + Grays)
 
@@ -152,9 +141,16 @@ The result is the familiar red‑on‑gray visualization widely used in:
 - cultural resource management  
 - legacy LiDAR workflows  
 
+### Output
+
+- RGB GeoTIFF  
+- GDAL `.aux.xml` sidecar  
+- No stretch applied  
+- Ready for map display  
+
 ---
 
-# 6. Comparison: Custom vs. Classic RRIM
+# Comparison: Custom vs. Classic RRIM
 
 | Feature | Custom RRIM | Classic RRIM |
 |--------|--------------|--------------|
@@ -162,7 +158,7 @@ The result is the familiar red‑on‑gray visualization widely used in:
 | Inputs | POS + NEG + Slope | POS + NEG + Slope |
 | Visual Style | Smooth, modern, high‑contrast | Red‑on‑gray, traditional |
 | Best For | Scientific visualization, geomorphology | Archaeology, legacy workflows |
-| Output | RGB GeoTIFF | RGB GeoTIFF |
+| Output | RGB GeoTIFF + aux.xml | RGB GeoTIFF + aux.xml |
 
 ---
 

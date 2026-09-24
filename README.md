@@ -3,9 +3,9 @@
 
 ## Overview
 
-The **RRIM Toolbox** is a fully ArcGIS‑native, high‑performance terrain visualization suite engineered for **massive LiDAR‑derived DEMs**, including **multi‑GB**, **statewide**, and **BIGTIFF** datasets.
+The **RRIM Toolbox** is a fully ArcGIS‑native, high‑performance terrain visualization suite engineered for **massive LiDAR‑derived DEMs**, including **multi‑GB**, and **BIGTIFF** datasets.
 
-All computational modules implement an end-to-end **tiled streaming architecture (2048 × 2048 blocks)** with sub-tile window buffering, SIMD vectorization, and fast GDAL I/O. This eliminates out-of-memory crashes (`numpy.core._exceptions._ArrayMemoryError`), allowing stable, low-overhead execution on rasters exceeding **60,000 × 70,000 cells (16+ GB)** while keeping RAM strictly constrained.
+All computational modules implement an end-to-end **tiled streaming architecture (2048 × 2048 blocks)** with sub-tile window buffering, SIMD vectorization, and fast GDAL I/O. This eliminates out-of-memory crashes, allowing stable, low-overhead execution on rasters exceeding **(15 GB)** while keeping RAM strictly constrained.
 
 The toolbox provides four core processing modules:
 
